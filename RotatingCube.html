@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            body { 
+                display: flex;
+                justify-content: center; 
+                flex-direction: column;
+            }
+            canvas {
+                width: 800px;
+                height: 600px;
+            }
+            #render-button {
+                width: 180px;
+                height: 50px;
+                font-size: 24pt;
+            }
+            #the-canvas { border: 1px solid darkblue; }
+            #user-matrix input { width: 32px; font-size: 24px; }
+        </style>
+    </head>
+
+    <body>
+        <canvas id = "the-canvas" width = "800" height = "600"></canvas>
+        <script src = "lib.js"></script>
+        <script src = "matrix.js"></script> 
+        <script src = "keys.js"></script>       
+        <script src = "mesh_template.js"></script>
+        <div>
+            <p style="font-size: x-large; margin-bottom: 5px;">Matrix: </p>
+            <table id ="user-matrix">
+                <tr>
+                    <td><input type="text" id="matrix-data-0" value="1"></td>
+                    <td><input type="text" id="matrix-data-1" value="0"></td>
+                    <td><input type="text" id="matrix-data-2" value="0"></td>
+                    <td><input type="text" id="matrix-data-3" value="0"></td>
+                </tr>
+                <tr>
+                    <td><input type="text" id="matrix-data-4" value="0"></td>
+                    <td><input type="text" id="matrix-data-5" value="1"></td>
+                    <td><input type="text" id="matrix-data-6" value="0"></td>
+                    <td><input type="text" id="matrix-data-7" value="0"></td>
+                </tr>
+                <tr>
+                    <td><input type="text" id="matrix-data-8" value="0"></td>
+                    <td><input type="text" id="matrix-data-9" value="0"></td>
+                    <td><input type="text" id="matrix-data-10" value="1"></td>
+                    <td><input type="text" id="matrix-data-11" value="0"></td>
+                </tr>
+                <tr>
+                    <td><input type="text" id="matrix-data-12" value="0"></td>
+                    <td><input type="text" id="matrix-data-13" value="0"></td>
+                    <td><input type="text" id="matrix-data-14" value="0"></td>
+                    <td><input type="text" id="matrix-data-15" value="1"></td>
+                </tr>
+            </table>
+            <input id="render-button" type="button" value ="Render" onclick="render()">
+        </div>
+
+        <script>
+            let canvas = document.getElementById( 'the-canvas' );
+            
+            /** @type {WebGLRenderingContext} */
+            let gl = canvas.getContext( 'webgl2' );
+
+            let verts = [ 
+                -0.5, -0.25, 0.0,   1.0, 0.0, 0.0, 1.0,
+                0, 0.6, 0.0,        0.0, 1.0, 0.0, 1.0,
+                0.5, -0.25, 0.0,    0.0, 0.0, 1.0, 1.0, 
+            ];
+
+            let vertex_buffer = create_and_load_vertex_buffer(gl, verts, gl.STATIC_DRAW);
+            
+            let vertex_source = 
+            `   #version 300 es
+                precision mediump float;
+
+                uniform mat4 modelview;
+
+                in vec3 coordinates;
+                in vec4 color;
+
+                out vec4 v_color;
+
+                void main( void ) {
+                    gl_Position = modelview * vec4( coordinates, 1.0 );
+                    v_color = color;
+                }
+            `;
+            
+            let fragment_source = 
+            `   #version 300 es
+                precision mediump float;
+
+                in vec4 v_color;
+
+                out vec4 f_color;
+
+                void main( void ) {
+                    f_color = v_color; 
+                }
+            `;
+
+            let shader_program = 
+                create_compile_and_link_program( gl, vertex_source, fragment_source );
+            gl.useProgram( shader_program );
+
+            var loaded_mesh = null; 
+
+
+            function some_function(mesh) {
+                loaded_mesh = mesh; 
+            }
+            
+            Mesh.from_obj_file(gl, "Cube.obj", shader_program, some_function); 
+
+            //VERTEX_STRIDE = 28;
+
+            set_vertex_attrib_to_buffer( 
+                gl, shader_program, 
+                "coordinates", 
+                vertex_buffer, 3, 
+                gl.FLOAT, false, VERTEX_STRIDE, 0 
+            );
+
+            set_vertex_attrib_to_buffer( 
+                gl, shader_program, 
+                "color", 
+                vertex_buffer, 4, 
+                gl.FLOAT, false, VERTEX_STRIDE, 12
+            );
+
+            set_render_params( gl );
+
+            requestAnimationFrame(render); 
+        </script>
+
+        
+    </body>
+</html>
